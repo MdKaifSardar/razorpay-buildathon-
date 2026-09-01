@@ -1,69 +1,133 @@
-import Image from "next/image";
+import React from 'react';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
+import { Badge } from '@/components/ui/Badge';
+import { Button } from '@/components/ui/Button';
+import { PRODUCTS_DATA, MERCHANTS_DATA } from '@/lib/utils/supabase';
 
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-blue-500 selection:text-white">
+      {/* Header Banner */}
+      <header className="border-b border-slate-800 bg-slate-900/50 backdrop-blur-md sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center font-bold text-white shadow-lg shadow-blue-500/30 border border-blue-400/40">
+              AG
+            </div>
+            <div>
+              <h1 className="font-bold text-base tracking-tight text-white flex items-center gap-2">
+                AgentCommerce Gateway
+                <Badge variant="blue">Razorpay AI Buildathon 2026</Badge>
+              </h1>
+              <p className="text-xs text-slate-400">Track 01 — AI Growth & Agentic Commerce</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 text-xs text-slate-400">
+            <span className="flex items-center gap-1.5 bg-emerald-500/10 text-emerald-400 px-3 py-1 rounded-full border border-emerald-500/20">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              Razorpay Test Mode Active
+            </span>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      </header>
+
+      {/* Hero Section */}
+      <section className="max-w-5xl mx-auto px-6 pt-12 pb-8 text-center">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-medium mb-6">
+          🛡️ Bounded Financial Authority for AI Buyers
         </div>
-      </main>
-    </div>
+        <h2 className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight leading-tight mb-4">
+          Let AI Agents Buy.{' '}
+          <span className="bg-gradient-to-r from-blue-400 via-indigo-300 to-purple-400 bg-clip-text text-transparent">
+            Keep Humans in Control of Money.
+          </span>
+        </h2>
+        <p className="text-lg text-slate-400 max-w-2xl mx-auto mb-8">
+          A secure authorization & transaction middleware that converts AI intent into locked Transaction Contracts, evaluates deterministic policies, and executes payments via Razorpay.
+        </p>
+
+        {/* Architecture Thesis Banner */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-3xl mx-auto text-xs font-mono bg-slate-900/90 border border-slate-800 p-3 rounded-xl shadow-xl">
+          <div className="p-2 rounded bg-slate-800/50">
+            <span className="text-blue-400 block font-bold">LLM</span>
+            <span className="text-slate-400">Reasoning</span>
+          </div>
+          <div className="p-2 rounded bg-slate-800/50">
+            <span className="text-amber-400 block font-bold">Policy Engine</span>
+            <span className="text-slate-400">Authority</span>
+          </div>
+          <div className="p-2 rounded bg-slate-800/50">
+            <span className="text-purple-400 block font-bold">Contract Lock</span>
+            <span className="text-slate-400">Safety</span>
+          </div>
+          <div className="p-2 rounded bg-slate-800/50">
+            <span className="text-emerald-400 block font-bold">Razorpay</span>
+            <span className="text-slate-400">Execution</span>
+          </div>
+        </div>
+      </section>
+
+      {/* Simulated Merchant Ecosystem Catalog Section */}
+      <section className="max-w-7xl mx-auto px-6 py-8">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h3 className="text-xl font-bold text-white">Simulated Merchant Ecosystem</h3>
+            <p className="text-xs text-slate-400">
+              Live products available for AI Agent product discovery and transaction testing
+            </p>
+          </div>
+          <div className="flex gap-2">
+            {MERCHANTS_DATA.map((merchant) => (
+              <Badge key={merchant.id} variant="purple">
+                {merchant.name} ({merchant.trustScore}% Trust)
+              </Badge>
+            ))}
+          </div>
+        </div>
+
+        {/* Product Catalog Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {PRODUCTS_DATA.slice(0, 6).map((product) => (
+            <Card key={product.id} className="hover:border-slate-700">
+              <CardHeader className="flex items-start justify-between">
+                <div>
+                  <Badge variant="slate" className="mb-2">
+                    {product.merchantName}
+                  </Badge>
+                  <CardTitle className="text-base line-clamp-1">{product.name}</CardTitle>
+                </div>
+                <Badge variant={product.inStock ? 'emerald' : 'rose'}>
+                  {product.inStock ? 'In Stock' : 'Out of Stock'}
+                </Badge>
+              </CardHeader>
+
+              <CardContent>
+                <p className="text-xs text-slate-400 line-clamp-2 mb-4">{product.description}</p>
+                <div className="flex items-center justify-between pt-2 border-t border-slate-800">
+                  <div>
+                    <span className="text-xs text-slate-500 block">Price</span>
+                    <span className="text-lg font-bold text-white">
+                      ₹{product.price.toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-xs text-slate-500 block">Shipping</span>
+                    <span className="text-xs font-medium text-slate-300">
+                      {product.shippingDays} days delivery
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="border-t border-slate-800 py-8 text-center text-xs text-slate-500">
+        AgentCommerce Gateway • Built for Razorpay AI Buildathon 2026 • Simulated Merchant Sandbox
+      </footer>
+    </main>
   );
 }
