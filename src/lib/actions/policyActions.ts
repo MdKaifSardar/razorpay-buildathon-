@@ -1,19 +1,7 @@
 'use server';
 
 import { TransactionIntent } from '../models/intent.model';
-import { BuyerPolicy, PolicyEvaluationResult } from '../models/policy.model';
-
-// Default User Spending Policy
-export const DEFAULT_USER_POLICY: BuyerPolicy = {
-  id: 'pol_user_default_v1',
-  userId: 'usr_main_buyer',
-  autoApproveLimit: 5000,
-  maxApprovalLimit: 10000,
-  allowedCategories: ['audio', 'peripherals', 'wearables', 'electronics'],
-  blockedCategories: ['restricted', 'gambling', 'crypto'],
-  requireApprovalOnPriceChange: true,
-  requireApprovalForNewMerchant: false,
-};
+import { BuyerPolicy, PolicyEvaluationResult, DEFAULT_USER_POLICY } from '../models/policy.model';
 
 /**
  * Server Action: Evaluate Transaction Intent against deterministic user policy

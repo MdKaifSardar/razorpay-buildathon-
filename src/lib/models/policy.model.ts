@@ -21,3 +21,15 @@ export interface PolicyEvaluationResult {
   policyId: string;
   evaluatedAt: string;
 }
+
+// Default User Spending Policy Constant
+export const DEFAULT_USER_POLICY: BuyerPolicy = {
+  id: 'pol_user_default_v1',
+  userId: 'usr_main_buyer',
+  autoApproveLimit: 5000,
+  maxApprovalLimit: 10000,
+  allowedCategories: ['audio', 'peripherals', 'wearables', 'electronics'],
+  blockedCategories: ['restricted', 'gambling', 'crypto'],
+  requireApprovalOnPriceChange: true,
+  requireApprovalForNewMerchant: false,
+};

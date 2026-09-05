@@ -12,12 +12,12 @@ import { PriceHikeSimulator } from '@/components/demo/PriceHikeSimulator';
 import { RazorpayCheckoutButton } from '@/components/payment/RazorpayCheckoutButton';
 import { AuditTimeline } from '@/components/audit/AuditTimeline';
 
-import { BuyerPolicy, PolicyEvaluationResult } from '@/lib/models/policy.model';
+import { DEFAULT_USER_POLICY, BuyerPolicy, PolicyEvaluationResult } from '@/lib/models/policy.model';
 import { TransactionIntent, AgentTaskResult } from '@/lib/models/intent.model';
 import { TransactionContract } from '@/lib/models/contract.model';
 import { AuditEvent } from '@/lib/models/audit.model';
 import { runAgentTaskAction } from '@/lib/actions/agentActions';
-import { DEFAULT_USER_POLICY, evaluatePolicyAction } from '@/lib/actions/policyActions';
+import { evaluatePolicyAction } from '@/lib/actions/policyActions';
 import { createContractAction } from '@/lib/actions/contractActions';
 import { verifyPaymentSignatureAction } from '@/lib/actions/paymentActions';
 import { getAuditEventsAction } from '@/lib/actions/orderActions';
