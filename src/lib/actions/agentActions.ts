@@ -21,7 +21,7 @@ export async function runAgentTaskAction(userPrompt: string): Promise<AgentTaskR
   const searchParams = await extractSearchIntentFromPrompt(userPrompt);
 
   // 2. Query merchant database
-  const catalogResult = queryCatalog(searchParams);
+  const catalogResult = await queryCatalog(searchParams);
 
   if (catalogResult.products.length === 0) {
     return {
@@ -29,7 +29,7 @@ export async function runAgentTaskAction(userPrompt: string): Promise<AgentTaskR
       userPrompt,
       extractedQuery: searchParams,
       totalProductsFound: 0,
-      error: `No products found matching "${searchParams.query}" under budget ${searchParams.maxPrice ? '₹' + searchParams.maxPrice : 'any price'}.`,
+      error: `No products found matching your search criteria for "${searchParams.query || userPrompt}". Try broadening your budget, category, or rating requirements.`,
     };
   }
 

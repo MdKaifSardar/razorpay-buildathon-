@@ -32,7 +32,7 @@ export function AgentChat({ onRunTask, isLoading }: AgentChatProps) {
           <div className="w-3 h-3 rounded-full bg-blue-500 animate-ping"></div>
           <h3 className="font-semibold text-white text-base">AI Commerce Assistant</h3>
         </div>
-        <span className="text-xs text-slate-400 font-mono">Groq Llama-3.3 70B</span>
+        <span className="text-xs text-slate-400 font-mono">Groq GPT-OSS 120B</span>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">

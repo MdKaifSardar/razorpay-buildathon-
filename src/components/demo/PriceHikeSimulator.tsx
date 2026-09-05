@@ -29,7 +29,7 @@ export function PriceHikeSimulator({
             <Badge variant="amber">Failure Recovery Test</Badge>
           </CardTitle>
           <p className="text-xs text-slate-400">
-            Simulate a mid-flight merchant price bump to test pre-payment contract invalidation.
+            Mutate the product price row in live Supabase PostgreSQL database to test pre-payment contract invalidation.
           </p>
         </div>
       </CardHeader>
@@ -41,7 +41,7 @@ export function PriceHikeSimulator({
               Authorized Contract Price: <strong className="text-emerald-400">₹{authorizedPrice.toLocaleString('en-IN')}</strong>
             </span>
             <span className="text-xs text-slate-400 block font-mono">
-              Simulated Merchant Price Surge:{' '}
+              Database Merchant Price Surge:{' '}
               <strong className="text-amber-400">₹{simulatedPrice.toLocaleString('en-IN')} (+10%)</strong>
             </span>
           </div>
@@ -52,15 +52,15 @@ export function PriceHikeSimulator({
             size="sm"
             onClick={() => onTogglePriceHike(!isSimulatedPriceHike)}
           >
-            {isSimulatedPriceHike ? '✓ Price Hike Active (Simulating Scam)' : 'Simulate Merchant Price Hike (+10%)'}
+            {isSimulatedPriceHike ? '✓ Price Hike Active in Database' : 'Simulate Merchant Price Hike in DB (+10%)'}
           </Button>
         </div>
 
         {isSimulatedPriceHike && (
           <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-300">
-            <span className="font-bold text-amber-400 block mb-1">🚨 Dynamic Price Slippage Triggered!</span>
+            <span className="font-bold text-amber-400 block mb-1">🚨 Database Row Updated to ₹{simulatedPrice.toLocaleString('en-IN')}!</span>
             <p>
-              When you click "Pay with Razorpay", the Gateway backend will re-validate the contract against live catalog price (₹{simulatedPrice.toLocaleString('en-IN')}). Because the price exceeds the authorized amount (₹{authorizedPrice.toLocaleString('en-IN')}), the contract will <strong className="text-rose-400">INVALIDATE</strong> and Razorpay will be **BLOCKED**.
+              The product row in your Supabase PostgreSQL database has been updated to ₹{simulatedPrice.toLocaleString('en-IN')}. When you click "Pay with Razorpay", the Gateway backend checks the live database price against the authorized contract amount (₹{authorizedPrice.toLocaleString('en-IN')}), immediately invalidating the contract (<strong className="text-rose-400">INVALIDATED_PRICE_CHANGED</strong>) and blocking Razorpay execution.
             </p>
           </div>
         )}

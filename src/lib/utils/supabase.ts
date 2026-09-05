@@ -1,4 +1,10 @@
+import { createClient } from '@supabase/supabase-js';
 import { Merchant, Product, CatalogSearchParams, CatalogSearchResult } from '../models/merchant.model';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+
+export const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 
 // Seeded Merchant Directory
 export const MERCHANTS_DATA: Merchant[] = [
@@ -201,7 +207,7 @@ export const PRODUCTS_DATA: Product[] = [
     category: 'peripherals',
     price: 2199,
     currency: 'INR',
-    stock: 0, // Out of stock demo item
+    stock: 0,
     rating: 4.2,
     inStock: false,
     shippingDays: 4,
@@ -298,12 +304,60 @@ export const PRODUCTS_DATA: Product[] = [
   },
 ];
 
-// High-Performance In-Memory Catalog Query Engine
-export function queryCatalog(params: CatalogSearchParams): CatalogSearchResult {
-  const { query, category, maxPrice, minPrice, merchantId, inStockOnly = true } = params;
-  const normalizedQuery = query.toLowerCase().trim();
+/**
+ * General Live DB & Fallback Catalog Query Engine
+ */
+export async function queryCatalog(params: CatalogSearchParams): Promise<CatalogSearchResult> {
+  const { query, category, maxPrice, minPrice, minRating, merchantId, inStockOnly = true } = params;
+  const normalizedQuery = (query || '').toLowerCase().trim();
 
-  let filtered = PRODUCTS_DATA.filter((product) => {
+  let sourceProducts = PRODUCTS_DATA;
+
+  // Query live Supabase PostgreSQL DB if client is connected
+  if (supabase) {
+    try {
+      let queryBuilder = supabase.from('products').select('*');
+
+      if (category && category !== 'all') {
+        queryBuilder = queryBuilder.eq('category', category);
+      }
+      if (maxPrice !== undefined && maxPrice !== null) {
+        queryBuilder = queryBuilder.lte('price', maxPrice);
+      }
+      if (minPrice !== undefined && minPrice !== null) {
+        queryBuilder = queryBuilder.gte('price', minPrice);
+      }
+      if (minRating !== undefined && minRating !== null) {
+        queryBuilder = queryBuilder.gte('rating', minRating);
+      }
+
+      const { data, error } = await queryBuilder;
+      if (!error && data && data.length > 0) {
+        sourceProducts = data.map((row: any) => ({
+          id: row.id,
+          merchantId: row.merchant_id,
+          merchantName: row.merchant_name,
+          name: row.name,
+          description: row.description,
+          category: row.category,
+          price: Number(row.price),
+          currency: row.currency || 'INR',
+          stock: Number(row.stock),
+          rating: Number(row.rating),
+          inStock: Number(row.stock) > 0,
+          shippingDays: Number(row.shipping_days || 3),
+          returnDays: 7,
+          imageUrl: row.image_url || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500',
+          attributes: { wireless: 'true' },
+        }));
+      }
+    } catch (err) {
+      console.warn('Failed to fetch from live Supabase DB, using fallback catalog store:', err);
+    }
+  }
+
+  // Filter products by constraints
+  let filtered = sourceProducts.filter((product) => {
     // 1. In Stock Filter
     if (inStockOnly && !product.inStock) {
       return false;
@@ -320,29 +374,33 @@ export function queryCatalog(params: CatalogSearchParams): CatalogSearchResult {
     }
 
     // 4. Max Price Filter
-    if (maxPrice !== undefined && product.price > maxPrice) {
+    if (maxPrice !== undefined && maxPrice !== null && product.price > maxPrice) {
       return false;
     }
 
     // 5. Min Price Filter
-    if (minPrice !== undefined && product.price < minPrice) {
+    if (minPrice !== undefined && minPrice !== null && product.price < minPrice) {
       return false;
     }
 
-    // 6. Keyword Match (Name, Description, Merchant, Category, Attributes)
+    // 6. Rating Filter (Threshold)
+    if (minRating !== undefined && minRating !== null && product.rating < minRating) {
+      return false;
+    }
+
+    // 7. General Keyword Search
     if (normalizedQuery) {
-      const matchText = `${product.name} ${product.description} ${product.merchantName} ${product.category} ${Object.values(product.attributes).join(' ')}`.toLowerCase();
-      
-      const queryTokens = normalizedQuery.split(/\s+/);
-      // Require at least one token to match
-      const hasMatch = queryTokens.some((token) => matchText.includes(token));
-      if (!hasMatch) return false;
+      const matchText = `${product.name} ${product.description} ${product.merchantName} ${product.category}`.toLowerCase();
+      const tokens = normalizedQuery.split(/\s+/).filter((t) => t.length > 2);
+      if (tokens.length > 0) {
+        const hasMatch = tokens.some((token) => matchText.includes(token));
+        if (!hasMatch) return false;
+      }
     }
 
     return true;
   });
 
-  // Sort by price ascending or relevance
   filtered.sort((a, b) => a.price - b.price);
 
   return {

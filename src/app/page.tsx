@@ -11,6 +11,7 @@ import { TransactionContractModal } from '@/components/contract/TransactionContr
 import { PriceHikeSimulator } from '@/components/demo/PriceHikeSimulator';
 import { RazorpayCheckoutButton } from '@/components/payment/RazorpayCheckoutButton';
 import { AuditTimeline } from '@/components/audit/AuditTimeline';
+import { AdminDashboard } from '@/components/admin/AdminDashboard';
 
 import { DEFAULT_USER_POLICY, BuyerPolicy, PolicyEvaluationResult } from '@/lib/models/policy.model';
 import { TransactionIntent, AgentTaskResult } from '@/lib/models/intent.model';
@@ -18,13 +19,15 @@ import { TransactionContract } from '@/lib/models/contract.model';
 import { AuditEvent } from '@/lib/models/audit.model';
 import { runAgentTaskAction } from '@/lib/actions/agentActions';
 import { evaluatePolicyAction } from '@/lib/actions/policyActions';
-import { createContractAction } from '@/lib/actions/contractActions';
+import { createContractAction, validateContractAction } from '@/lib/actions/contractActions';
+import { updateProductPriceAction } from '@/lib/actions/merchantActions';
 import { verifyPaymentSignatureAction } from '@/lib/actions/paymentActions';
 import { getAuditEventsAction } from '@/lib/actions/orderActions';
 import { logAuditEvent } from '@/lib/utils/auditLogger';
 
 export default function Home() {
   // State Management
+  const [mainViewTab, setMainViewTab] = useState<'buyer' | 'admin'>('buyer');
   const [policy, setPolicy] = useState<BuyerPolicy>(DEFAULT_USER_POLICY);
   const [isAgentRunning, setIsAgentRunning] = useState(false);
   const [taskResult, setTaskResult] = useState<AgentTaskResult | null>(null);
@@ -200,6 +203,35 @@ export default function Home() {
     await refreshAuditEvents(taskResult.intent.intentId);
   };
 
+  // 6. Scam Simulation: Mutate Product Price Row in Live Supabase DB
+  const handleTogglePriceHike = async (active: boolean) => {
+    if (!contract) return;
+    setSimulatedPriceHike(active);
+
+    const originalPrice = contract.authorizedAmount;
+    const hikedPrice = Math.round(originalPrice * 1.1);
+    const targetPrice = active ? hikedPrice : originalPrice;
+
+    // Mutate live product price row in Supabase PostgreSQL database!
+    await updateProductPriceAction(contract.productId, targetPrice);
+
+    logAuditEvent(
+      contract.contractId,
+      'PRICE_CHANGED',
+      active ? 'Merchant Price Surge Mutated in DB' : 'Merchant Price Reset in DB',
+      active
+        ? `Merchant mutated product price row in live Supabase database to ₹${targetPrice.toLocaleString('en-IN')} (+10% surge).`
+        : `Merchant price row reset to original contract price ₹${targetPrice.toLocaleString('en-IN')} in live Supabase database.`,
+      active ? 'WARNING' : 'INFO',
+      { productId: contract.productId, originalPrice, newPrice: targetPrice }
+    );
+
+    // Re-validate contract against live DB row!
+    const validation = await validateContractAction(contract);
+    setContract(validation.updatedContract);
+    await refreshAuditEvents(contract.contractId);
+  };
+
   return (
     <main className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-blue-500 selection:text-white pb-16">
       {/* Top Header */}
@@ -219,7 +251,31 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="flex items-center gap-1.5 bg-emerald-500/10 text-emerald-400 text-xs px-3 py-1 rounded-full border border-emerald-500/20">
+            {/* View Switcher Tabs */}
+            <div className="flex gap-1 p-1 bg-slate-950 border border-slate-800 rounded-xl">
+              <button
+                onClick={() => setMainViewTab('buyer')}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                  mainViewTab === 'buyer'
+                    ? 'bg-blue-600 text-white shadow-md shadow-blue-900/40'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                🛍️ Buyer Gateway
+              </button>
+              <button
+                onClick={() => setMainViewTab('admin')}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                  mainViewTab === 'admin'
+                    ? 'bg-purple-600 text-white shadow-md shadow-purple-900/40'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                🛡️ Admin & Governance
+              </button>
+            </div>
+
+            <span className="hidden sm:flex items-center gap-1.5 bg-emerald-500/10 text-emerald-400 text-xs px-3 py-1 rounded-full border border-emerald-500/20">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
               Razorpay Test Mode Active
             </span>
@@ -228,11 +284,15 @@ export default function Home() {
       </header>
 
       <div className="max-w-6xl mx-auto px-6 pt-8 space-y-6">
-        {/* Policy Configuration Controls */}
-        <PolicyConfigCard policy={policy} onUpdatePolicy={setPolicy} />
+        {mainViewTab === 'admin' ? (
+          <AdminDashboard />
+        ) : (
+          <>
+            {/* Policy Configuration Controls */}
+            <PolicyConfigCard policy={policy} onUpdatePolicy={setPolicy} />
 
-        {/* AI Assistant Prompt Input */}
-        <AgentChat onRunTask={handleInstructAgent} isLoading={isAgentRunning} />
+            {/* AI Assistant Prompt Input */}
+            <AgentChat onRunTask={handleInstructAgent} isLoading={isAgentRunning} />
 
         {/* Error Notification */}
         {errorMsg && (
@@ -303,7 +363,7 @@ export default function Home() {
           <PriceHikeSimulator
             contract={contract}
             isSimulatedPriceHike={simulatedPriceHike}
-            onTogglePriceHike={setSimulatedPriceHike}
+            onTogglePriceHike={handleTogglePriceHike}
           />
         )}
 
@@ -312,7 +372,6 @@ export default function Home() {
           <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 backdrop-blur-xl">
             <RazorpayCheckoutButton
               contract={contract}
-              simulatedPriceOverride={simulatedPriceHike ? Math.round(contract.authorizedAmount * 1.1) : undefined}
               onPaymentSuccess={handlePaymentSuccess}
               onPaymentFailed={handlePaymentFailed}
             />
@@ -338,6 +397,8 @@ export default function Home() {
 
         {/* Audit Log Timeline */}
         <AuditTimeline events={auditEvents} />
+          </>
+        )}
       </div>
     </main>
   );

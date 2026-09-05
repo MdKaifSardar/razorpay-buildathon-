@@ -1,10 +1,11 @@
 import { AuditEvent, AuditEventType } from '../models/audit.model';
+import { supabase } from './supabase';
 
 // In-Memory store for transaction audit logs
 const AUDIT_EVENTS: AuditEvent[] = [];
 
 /**
- * Record an audit event in the transaction timeline
+ * Record an audit event in the transaction timeline and persist to Supabase DB
  */
 export function logAuditEvent(
   referenceId: string,
@@ -26,6 +27,24 @@ export function logAuditEvent(
   };
 
   AUDIT_EVENTS.push(event);
+
+  // Persist to Supabase hosted DB asynchronously if client is connected
+  if (supabase) {
+    supabase
+      .from('audit_events')
+      .insert({
+        reference_id: referenceId,
+        event_type: eventType,
+        title,
+        description,
+        level: status,
+        metadata: metadata ? JSON.stringify(metadata) : null,
+      })
+      .then(({ error }) => {
+        if (error) console.warn('Failed to insert audit event into Supabase:', error.message);
+      });
+  }
+
   return event;
 }
 

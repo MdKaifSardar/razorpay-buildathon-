@@ -32,6 +32,7 @@ export interface CatalogSearchParams {
   category?: 'audio' | 'peripherals' | 'wearables' | 'electronics' | string;
   maxPrice?: number;
   minPrice?: number;
+  minRating?: number;
   merchantId?: string;
   inStockOnly?: boolean;
 }

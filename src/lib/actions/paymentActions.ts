@@ -20,6 +20,7 @@ export async function createRazorpayOrderAction(
   amount?: number;
   currency?: string;
   keyId?: string;
+  isSimulatedOrder?: boolean;
   error?: string;
 }> {
   // 1. Pre-Payment Contract Re-validation!
@@ -65,9 +66,9 @@ export async function createRazorpayOrderAction(
     contract.contractId,
     'RAZORPAY_ORDER_CREATED',
     'Razorpay Order Created',
-    `Created Razorpay Order ${rzpOrder.orderId} for ₹${contract.authorizedAmount.toLocaleString('en-IN')}. Ready for checkout.`,
+    `Created Razorpay Order ${rzpOrder.orderId} for ₹${contract.authorizedAmount.toLocaleString('en-IN')}.${rzpOrder.isSimulatedOrder ? ' (Simulated Order Fallback)' : ' Ready for live checkout.'}`,
     'SUCCESS',
-    { razorpayOrderId: rzpOrder.orderId, amount: contract.authorizedAmount }
+    { razorpayOrderId: rzpOrder.orderId, amount: contract.authorizedAmount, isSimulatedOrder: rzpOrder.isSimulatedOrder }
   );
 
   return {
@@ -77,6 +78,7 @@ export async function createRazorpayOrderAction(
     amount: rzpOrder.amount,
     currency: rzpOrder.currency,
     keyId: rzpOrder.keyId,
+    isSimulatedOrder: rzpOrder.isSimulatedOrder,
   };
 }
 
