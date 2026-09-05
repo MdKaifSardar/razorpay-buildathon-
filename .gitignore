@@ -42,8 +42,15 @@ next-env.d.ts
 
 # database schema & test scripts
 schema.sql
+script-video.md
+architecture-diagram.md
+public/architecture.html
+architecture.html
 test_*.ts
 test_*.js
 seed_*.ts
 scratch/
 *.csv
+
+
+

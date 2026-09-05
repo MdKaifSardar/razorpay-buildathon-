@@ -3,6 +3,7 @@
 import React from 'react';
 import { BuyerPolicy } from '@/lib/models/policy.model';
 import { Badge } from '@/components/ui/Badge';
+import { Shield } from 'lucide-react';
 
 interface PolicyConfigCardProps {
   policy: BuyerPolicy;
@@ -15,7 +16,7 @@ export function PolicyConfigCard({ policy, onUpdatePolicy }: PolicyConfigCardPro
       <div className="flex items-center justify-between mb-4">
         <div>
           <h4 className="font-bold text-white text-sm flex items-center gap-2">
-            🛡️ My AI Spending Policy
+            <Shield className="w-4 h-4 text-blue-400" /> My AI Spending Policy
             <Badge variant="blue">Deterministic Controls</Badge>
           </h4>
           <p className="text-xs text-slate-400">

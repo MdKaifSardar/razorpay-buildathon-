@@ -33,35 +33,38 @@ As autonomous AI agents (OpenAI Operator, Perplexity Commerce, Enterprise purcha
 
 ## 3. High-Level Architecture
 
-```text
-[ USER PROMPT ] ──► Instructs AI Assistant ("Find headphones under ₹8,000")
-                         │
-                         ▼
-[ GROQ LLM + VERCEL AI SDK ] ──► Extracts intent & tool calls catalog query
-                         │
-                         ▼
-[ SIMULATED MERCHANT DB ] ─────► Searches AudioHub, TechStore, GadgetMart
-                         │
-                         ▼
-[ TRANSACTION INTENT ] ────────► Structured JSON Intent (JBL Tune 770NC @ ₹6,999)
-                         │
-                         ▼
-[ DETERMINISTIC POLICY ENGINE ] ──► Evaluates user rules: AUTO_APPROVE | NEEDS_APPROVAL | REJECT
-                         │
-                         ▼
-[ TRANSACTION CONTRACT ] ──────► Locked Contract (TC-82931, Amount: ₹6,999, TTL: 10m)
-                         │
-                         ▼
-[ PRE-PAYMENT VALIDATION ] ────► Re-checks live price & stock (Blocks if price changed!)
-                         │
-                         ▼
-[ RAZORPAY TEST MODE ] ────────► Server creates Razorpay Order -> Launch Checkout Modal
-                         │
-                         ▼
-[ HMAC SIGNATURE VERIFY ] ─────► Server verifies SHA256 signature & marks Order PAID
-                         │
-                         ▼
-[ AUDIT TIMELINE ] ────────────► Real-time visual audit trail logged
+```mermaid
+flowchart TD
+    %% Styling Classes
+    classDef default stroke:#475569,fill:#0f172a,color:#f8fafc,stroke-width:2px;
+    classDef highlight stroke:#38bdf8,fill:#0c4a6e,color:#ffffff,stroke-width:3px;
+    classDef security stroke:#f43f5e,fill:#881337,color:#ffffff,stroke-width:3px;
+    classDef success stroke:#10b981,fill:#064e3b,color:#ffffff,stroke-width:3px;
+
+    %% Nodes
+    USER["User Intent: Wireless Headphones under ₹8,000"]:::default
+    GROQ["Groq LPU Intent Parser (<150ms)"]:::highlight
+    DB_SEARCH["Supabase PostgreSQL Search (30 Items)"]:::default
+    PRODUCT_REC["Recommended: Sony WH-CH520 @ ₹4,490"]:::default
+    POLICY_ENGINE["Policy Engine: Auto-Approve Limit ₹5,000"]:::highlight
+    CONTRACT["Transaction Contract Issued (TC-73271)"]:::success
+    REVALIDATE{"Pre-Payment DB Re-Validation"}:::highlight
+    INVALIDATED["Contract INVALIDATED & Payment Blocked"]:::security
+    RAZORPAY_ORDER["Razorpay Order Created"]:::success
+    HMAC_VERIFY["Server HMAC-SHA256 Signature Verification"]:::success
+    AUDIT["System Audit Stream Logged"]:::default
+
+    %% Flow Connections
+    USER --> GROQ
+    GROQ --> DB_SEARCH
+    DB_SEARCH --> PRODUCT_REC
+    PRODUCT_REC --> POLICY_ENGINE
+    POLICY_ENGINE -->|Auto-Approved| CONTRACT
+    CONTRACT --> REVALIDATE
+    REVALIDATE -->|Price Surged in DB| INVALIDATED
+    REVALIDATE -->|Price Valid| RAZORPAY_ORDER
+    RAZORPAY_ORDER --> HMAC_VERIFY
+    HMAC_VERIFY --> AUDIT
 ```
 
 ---

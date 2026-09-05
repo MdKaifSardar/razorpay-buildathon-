@@ -25,6 +25,8 @@ import { verifyPaymentSignatureAction } from '@/lib/actions/paymentActions';
 import { getAuditEventsAction } from '@/lib/actions/orderActions';
 import { logAuditEvent } from '@/lib/utils/auditLogger';
 
+import { ShoppingBag, Shield, Check, X, AlertCircle } from 'lucide-react';
+
 export default function Home() {
   // State Management
   const [mainViewTab, setMainViewTab] = useState<'buyer' | 'admin'>('buyer');
@@ -255,23 +257,23 @@ export default function Home() {
             <div className="flex gap-1 p-1 bg-slate-950 border border-slate-800 rounded-xl">
               <button
                 onClick={() => setMainViewTab('buyer')}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 ${
                   mainViewTab === 'buyer'
                     ? 'bg-blue-600 text-white shadow-md shadow-blue-900/40'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
-                🛍️ Buyer Gateway
+                <ShoppingBag className="w-3.5 h-3.5" /> Buyer Gateway
               </button>
               <button
                 onClick={() => setMainViewTab('admin')}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 ${
                   mainViewTab === 'admin'
                     ? 'bg-purple-600 text-white shadow-md shadow-purple-900/40'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
-                🛡️ Admin & Governance
+                <Shield className="w-3.5 h-3.5" /> Admin & Governance
               </button>
             </div>
 
@@ -298,7 +300,7 @@ export default function Home() {
         {errorMsg && (
           <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-sm flex items-center justify-between">
             <span className="flex items-center gap-2">
-              <span className="font-bold">⚠️ Notice:</span> {errorMsg}
+              <AlertCircle className="w-4 h-4 text-rose-400" /> <span className="font-bold">Notice:</span> {errorMsg}
             </span>
             <button onClick={() => setErrorMsg(null)} className="text-rose-400 hover:text-white text-xs underline">
               Dismiss
@@ -344,10 +346,14 @@ export default function Home() {
               {policyResult.decision === 'NEEDS_APPROVAL' && !contract && (
                 <div className="flex items-center gap-2">
                   <Button variant="primary" size="sm" onClick={handleUserApprovePurchase}>
-                    ✓ Approve Purchase (₹{policyResult.proposedAmount.toLocaleString('en-IN')})
+                    <span className="flex items-center gap-1.5">
+                      <Check className="w-3.5 h-3.5" /> Approve Purchase (₹{policyResult.proposedAmount.toLocaleString('en-IN')})
+                    </span>
                   </Button>
                   <Button variant="danger" size="sm" onClick={handleUserRejectPurchase}>
-                    ✕ Reject
+                    <span className="flex items-center gap-1.5">
+                      <X className="w-3.5 h-3.5" /> Reject
+                    </span>
                   </Button>
                 </div>
               )}
@@ -381,8 +387,8 @@ export default function Home() {
         {/* Payment Success Confirmation Banner */}
         {paymentCompleted && (
           <Card className="border-emerald-500/50 bg-emerald-950/20 shadow-emerald-950/30 text-center py-8">
-            <div className="w-14 h-14 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center text-2xl mx-auto mb-4">
-              ✓
+            <div className="w-14 h-14 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center mx-auto mb-4">
+              <Check className="w-7 h-7 text-emerald-400" />
             </div>
             <h3 className="text-2xl font-extrabold text-white mb-2">Purchase Completed & Verified!</h3>
             <p className="text-sm text-slate-300 max-w-lg mx-auto mb-4">

@@ -2,6 +2,7 @@ import React from 'react';
 import { AuditEvent } from '@/lib/models/audit.model';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
+import { History } from 'lucide-react';
 
 interface AuditTimelineProps {
   events: AuditEvent[];
@@ -22,7 +23,7 @@ export function AuditTimeline({ events }: AuditTimelineProps) {
       <CardHeader className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <CardTitle className="text-base flex items-center gap-2">
-            📜 Transaction Audit Timeline
+            <History className="w-4 h-4 text-blue-400" /> Transaction Audit Timeline
             <Badge variant="blue">{events.length} Events</Badge>
           </CardTitle>
         </div>

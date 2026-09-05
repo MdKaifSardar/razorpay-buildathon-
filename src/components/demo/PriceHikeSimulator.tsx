@@ -5,6 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { TransactionContract } from '@/lib/models/contract.model';
+import { ShieldAlert, Check, AlertTriangle } from 'lucide-react';
 
 interface PriceHikeSimulatorProps {
   contract: TransactionContract;
@@ -25,7 +26,7 @@ export function PriceHikeSimulator({
       <CardHeader className="flex items-center justify-between">
         <div>
           <CardTitle className="text-sm font-bold text-amber-300 flex items-center gap-2">
-            ⚠️ Security & Scam Prevention Demo Controls
+            <ShieldAlert className="w-4 h-4 text-amber-400" /> Security & Scam Prevention Demo Controls
             <Badge variant="amber">Failure Recovery Test</Badge>
           </CardTitle>
           <p className="text-xs text-slate-400">
@@ -52,13 +53,23 @@ export function PriceHikeSimulator({
             size="sm"
             onClick={() => onTogglePriceHike(!isSimulatedPriceHike)}
           >
-            {isSimulatedPriceHike ? '✓ Price Hike Active in Database' : 'Simulate Merchant Price Hike in DB (+10%)'}
+            <span className="flex items-center gap-1.5">
+              {isSimulatedPriceHike ? (
+                <>
+                  <Check className="w-3.5 h-3.5" /> Price Hike Active in Database (Click to Reset)
+                </>
+              ) : (
+                'Simulate Merchant Price Hike in DB (+10%)'
+              )}
+            </span>
           </Button>
         </div>
 
         {isSimulatedPriceHike && (
           <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-300">
-            <span className="font-bold text-amber-400 block mb-1">🚨 Database Row Updated to ₹{simulatedPrice.toLocaleString('en-IN')}!</span>
+            <span className="font-bold text-amber-400 flex items-center gap-1.5 mb-1">
+              <AlertTriangle className="w-4 h-4 text-amber-400" /> Database Row Updated to ₹{simulatedPrice.toLocaleString('en-IN')}!
+            </span>
             <p>
               The product row in your Supabase PostgreSQL database has been updated to ₹{simulatedPrice.toLocaleString('en-IN')}. When you click "Pay with Razorpay", the Gateway backend checks the live database price against the authorized contract amount (₹{authorizedPrice.toLocaleString('en-IN')}), immediately invalidating the contract (<strong className="text-rose-400">INVALIDATED_PRICE_CHANGED</strong>) and blocking Razorpay execution.
             </p>

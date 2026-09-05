@@ -2,6 +2,7 @@ import React from 'react';
 import { TransactionIntent } from '@/lib/models/intent.model';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
+import { Bot } from 'lucide-react';
 
 interface AgentReasoningCardProps {
   intent: TransactionIntent;
@@ -43,7 +44,9 @@ export function AgentReasoningCard({ intent, totalProductsFound }: AgentReasonin
 
         {/* AI Reasoning Block */}
         <div className="p-3.5 rounded-xl bg-blue-500/5 border border-blue-500/20 text-xs text-slate-300">
-          <span className="font-semibold text-blue-300 block mb-1">🤖 AI Selection Reasoning:</span>
+          <span className="font-semibold text-blue-300 flex items-center gap-1.5 mb-1">
+            <Bot className="w-4 h-4 text-blue-400" /> AI Selection Reasoning:
+          </span>
           <p className="leading-relaxed text-slate-300">{aiReasoning}</p>
         </div>
       </CardContent>

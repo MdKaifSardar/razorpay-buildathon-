@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { TransactionContract } from '@/lib/models/contract.model';
 import { createRazorpayOrderAction } from '@/lib/actions/paymentActions';
 import { Button } from '@/components/ui/Button';
+import { CreditCard } from 'lucide-react';
 
 interface RazorpayCheckoutButtonProps {
   contract: TransactionContract;
@@ -169,7 +170,9 @@ export function RazorpayCheckoutButton({
           Validating Contract & Opening Razorpay...
         </span>
       ) : (
-        `Pay ₹${contract.authorizedAmount.toLocaleString('en-IN')} with Razorpay Test Mode →`
+        <span className="flex items-center justify-center gap-2">
+          <CreditCard className="w-4 h-4" /> Pay ₹{contract.authorizedAmount.toLocaleString('en-IN')} with Razorpay Test Mode
+        </span>
       )}
     </Button>
   );

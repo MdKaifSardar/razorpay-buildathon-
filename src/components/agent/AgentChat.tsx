@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/Button';
+import { Send, Bot } from 'lucide-react';
 
 interface AgentChatProps {
   onRunTask: (prompt: string) => void;
@@ -29,7 +30,7 @@ export function AgentChat({ onRunTask, isLoading }: AgentChatProps) {
     <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-2xl backdrop-blur-xl mb-6">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-blue-500 animate-ping"></div>
+          <Bot className="w-4 h-4 text-blue-400" />
           <h3 className="font-semibold text-white text-base">AI Commerce Assistant</h3>
         </div>
         <span className="text-xs text-slate-400 font-mono">Groq GPT-OSS 120B</span>
@@ -57,7 +58,9 @@ export function AgentChat({ onRunTask, isLoading }: AgentChatProps) {
                 Searching...
               </span>
             ) : (
-              'Instruct Agent →'
+              <span className="flex items-center gap-1.5">
+                <Send className="w-3.5 h-3.5" /> Instruct Agent
+              </span>
             )}
           </Button>
         </div>

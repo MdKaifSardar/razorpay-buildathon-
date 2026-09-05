@@ -14,6 +14,7 @@ import {
 import { Merchant, Product } from '@/lib/models/merchant.model';
 import { TransactionContract } from '@/lib/models/contract.model';
 import { AuditEvent } from '@/lib/models/audit.model';
+import { Shield, RefreshCw, Store, FileText, History, Star } from 'lucide-react';
 
 export function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<'catalog' | 'contracts' | 'audit'>('catalog');
@@ -66,7 +67,7 @@ export function AdminDashboard() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-2xl backdrop-blur-xl">
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-xl">🛡️</span>
+            <Shield className="w-5 h-5 text-purple-400" />
             <h2 className="text-xl font-bold text-white tracking-wide">
               Admin & Governance Control Console
             </h2>
@@ -78,7 +79,10 @@ export function AdminDashboard() {
         </div>
 
         <Button onClick={loadAdminData} variant="secondary" size="sm" disabled={loading}>
-          {loading ? 'Refreshing...' : '🔄 Refresh Live Data'}
+          <span className="flex items-center gap-1.5">
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            {loading ? 'Refreshing...' : 'Refresh Live Data'}
+          </span>
         </Button>
       </div>
 
@@ -130,33 +134,33 @@ export function AdminDashboard() {
         <div className="flex gap-2 p-1 bg-slate-900 border border-slate-800 rounded-xl">
           <button
             onClick={() => setActiveTab('catalog')}
-            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all ${
+            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 ${
               activeTab === 'catalog'
                 ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/40'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            🏪 Merchant Catalog ({products.length})
+            <Store className="w-3.5 h-3.5" /> Merchant Catalog ({products.length})
           </button>
           <button
             onClick={() => setActiveTab('contracts')}
-            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all ${
+            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 ${
               activeTab === 'contracts'
                 ? 'bg-purple-600 text-white shadow-lg shadow-purple-900/40'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            📑 Transaction Contracts ({contracts.length})
+            <FileText className="w-3.5 h-3.5" /> Transaction Contracts ({contracts.length})
           </button>
           <button
             onClick={() => setActiveTab('audit')}
-            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all ${
+            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 ${
               activeTab === 'audit'
                 ? 'bg-amber-600 text-white shadow-lg shadow-amber-900/40'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            📜 Audit Trail ({auditLogs.length})
+            <History className="w-3.5 h-3.5" /> Audit Trail ({auditLogs.length})
           </button>
         </div>
 
@@ -191,7 +195,11 @@ export function AdminDashboard() {
                       Free {m.shippingDays}-day delivery • {m.description}
                     </span>
                   </div>
-                  <Badge variant="emerald">{m.trustScore / 20} ★ Verified</Badge>
+                  <Badge variant="emerald">
+                    <span className="flex items-center gap-1">
+                      {m.trustScore / 20} <Star className="w-3 h-3 fill-emerald-400 text-emerald-400" /> Verified
+                    </span>
+                  </Badge>
                 </div>
               ))}
             </div>
@@ -221,7 +229,11 @@ export function AdminDashboard() {
                         ₹{p.price.toLocaleString('en-IN')}
                       </td>
                       <td className="p-3 text-slate-300">{p.stock} units</td>
-                      <td className="p-3 text-amber-400 font-bold">{p.rating} ★</td>
+                      <td className="p-3 text-amber-400 font-bold">
+                        <span className="flex items-center gap-1">
+                          {p.rating} <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                        </span>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

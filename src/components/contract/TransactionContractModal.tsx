@@ -2,6 +2,7 @@ import React from 'react';
 import { TransactionContract } from '@/lib/models/contract.model';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
+import { XCircle, FileCode } from 'lucide-react';
 
 interface TransactionContractModalProps {
   contract: TransactionContract;
@@ -21,6 +22,7 @@ export function TransactionContractModal({ contract }: TransactionContractModalP
       <CardHeader className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-2 mb-1">
+            <FileCode className="w-4 h-4 text-purple-400" />
             <span className="text-sm font-extrabold text-purple-300 tracking-wider">
               TRANSACTION CONTRACT
             </span>
@@ -66,7 +68,9 @@ export function TransactionContractModal({ contract }: TransactionContractModalP
         {/* Status Notification Banner */}
         {isInvalidated ? (
           <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-xs text-rose-300">
-            <span className="font-bold text-rose-400 block mb-1">❌ CONTRACT INVALIDATED</span>
+            <span className="font-bold text-rose-400 flex items-center gap-1.5 mb-1">
+              <XCircle className="w-4 h-4 text-rose-400" /> CONTRACT INVALIDATED
+            </span>
             <p>{contract.invalidationReason || 'Contract is no longer valid for payment initiation.'}</p>
           </div>
         ) : (
