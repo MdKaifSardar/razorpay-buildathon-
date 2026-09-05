@@ -1,14 +1,209 @@
-import React from 'react';
+'use client';
+
+import React, { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { PRODUCTS_DATA, MERCHANTS_DATA } from '@/lib/utils/supabase';
+import { PolicyConfigCard } from '@/components/policy/PolicyConfigCard';
+import { AgentChat } from '@/components/agent/AgentChat';
+import { AgentReasoningCard } from '@/components/agent/AgentReasoningCard';
+import { TransactionContractModal } from '@/components/contract/TransactionContractModal';
+import { PriceHikeSimulator } from '@/components/demo/PriceHikeSimulator';
+import { RazorpayCheckoutButton } from '@/components/payment/RazorpayCheckoutButton';
+import { AuditTimeline } from '@/components/audit/AuditTimeline';
+
+import { BuyerPolicy, PolicyEvaluationResult } from '@/lib/models/policy.model';
+import { TransactionIntent, AgentTaskResult } from '@/lib/models/intent.model';
+import { TransactionContract } from '@/lib/models/contract.model';
+import { AuditEvent } from '@/lib/models/audit.model';
+import { runAgentTaskAction } from '@/lib/actions/agentActions';
+import { DEFAULT_USER_POLICY, evaluatePolicyAction } from '@/lib/actions/policyActions';
+import { createContractAction } from '@/lib/actions/contractActions';
+import { verifyPaymentSignatureAction } from '@/lib/actions/paymentActions';
+import { getAuditEventsAction } from '@/lib/actions/orderActions';
+import { logAuditEvent } from '@/lib/utils/auditLogger';
 
 export default function Home() {
+  // State Management
+  const [policy, setPolicy] = useState<BuyerPolicy>(DEFAULT_USER_POLICY);
+  const [isAgentRunning, setIsAgentRunning] = useState(false);
+  const [taskResult, setTaskResult] = useState<AgentTaskResult | null>(null);
+  const [policyResult, setPolicyResult] = useState<PolicyEvaluationResult | null>(null);
+  const [contract, setContract] = useState<TransactionContract | null>(null);
+  const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([]);
+  const [simulatedPriceHike, setSimulatedPriceHike] = useState(false);
+  const [paymentCompleted, setPaymentCompleted] = useState<{
+    paymentId: string;
+    orderId: string;
+  } | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Helper to refresh audit log state
+  const refreshAuditEvents = async (refId: string) => {
+    const events = await getAuditEventsAction(refId);
+    setAuditEvents(events);
+  };
+
+  // 1. Run AI Buyer Agent Task
+  const handleInstructAgent = async (userPrompt: string) => {
+    setIsAgentRunning(true);
+    setErrorMsg(null);
+    setTaskResult(null);
+    setPolicyResult(null);
+    setContract(null);
+    setPaymentCompleted(null);
+    setAuditEvents([]);
+
+    try {
+      // Execute Agent Task Server Action
+      const result = await runAgentTaskAction(userPrompt);
+      setTaskResult(result);
+      setIsAgentRunning(false);
+
+      if (!result.success || !result.intent) {
+        setErrorMsg(result.error || 'No matching products found.');
+        return;
+      }
+
+      const intent = result.intent;
+
+      // Log Audit: USER_INTENT & AI_DISCOVERED
+      logAuditEvent(
+        intent.intentId,
+        'USER_INTENT',
+        'User Instruction Received',
+        `User prompt: "${userPrompt}"`,
+        'INFO'
+      );
+
+      logAuditEvent(
+        intent.intentId,
+        'PRODUCT_SELECTED',
+        'AI Product Recommendation Selected',
+        `Selected ${intent.product.name} from ${intent.product.merchantName} for ₹${intent.proposedAmount.toLocaleString('en-IN')}.`,
+        'SUCCESS',
+        { productId: intent.product.id, merchant: intent.product.merchantName, price: intent.proposedAmount }
+      );
+
+      // Evaluate Policy
+      const polResult = await evaluatePolicyAction(intent, policy);
+      setPolicyResult(polResult);
+
+      logAuditEvent(
+        intent.intentId,
+        'POLICY_EVALUATED',
+        `Policy Evaluated: ${polResult.decision}`,
+        polResult.reason,
+        polResult.decision === 'REJECT' ? 'ERROR' : polResult.decision === 'NEEDS_APPROVAL' ? 'WARNING' : 'SUCCESS',
+        { decision: polResult.decision, autoApproveLimit: polResult.autoApproveLimit, proposedAmount: polResult.proposedAmount }
+      );
+
+      // If Auto-Approved, issue contract immediately
+      if (polResult.decision === 'APPROVE') {
+        const newContract = await createContractAction(intent, 'AUTO_APPROVED');
+        setContract(newContract);
+
+        logAuditEvent(
+          intent.intentId,
+          'CONTRACT_CREATED',
+          'Transaction Contract Locked',
+          `Created Transaction Contract ${newContract.contractId} automatically for ₹${newContract.authorizedAmount.toLocaleString('en-IN')}.`,
+          'SUCCESS',
+          { contractId: newContract.contractId, authType: 'AUTO_APPROVED' }
+        );
+      }
+
+      await refreshAuditEvents(intent.intentId);
+    } catch (err: any) {
+      setIsAgentRunning(false);
+      setErrorMsg(err.message || 'An error occurred processing prompt.');
+    }
+  };
+
+  // 2. User 1-Click Approval Handler
+  const handleUserApprovePurchase = async () => {
+    if (!taskResult?.intent) return;
+    const intent = taskResult.intent;
+
+    logAuditEvent(
+      intent.intentId,
+      'USER_AUTHORIZED',
+      'User Authorized Purchase',
+      `User approved purchase of ${intent.product.name} for ₹${intent.proposedAmount.toLocaleString('en-IN')}.`,
+      'SUCCESS'
+    );
+
+    const newContract = await createContractAction(intent, 'USER_APPROVED');
+    setContract(newContract);
+
+    logAuditEvent(
+      intent.intentId,
+      'CONTRACT_CREATED',
+      'Transaction Contract Issued',
+      `Issued Transaction Contract ${newContract.contractId} under user authorization. TTL 10 minutes.`,
+      'SUCCESS',
+      { contractId: newContract.contractId, authType: 'USER_APPROVED' }
+    );
+
+    await refreshAuditEvents(intent.intentId);
+  };
+
+  // 3. User Rejection Handler
+  const handleUserRejectPurchase = () => {
+    if (!taskResult?.intent) return;
+    logAuditEvent(
+      taskResult.intent.intentId,
+      'POLICY_BLOCKED',
+      'User Rejected Purchase',
+      'User declined to authorize the proposed purchase proposal.',
+      'ERROR'
+    );
+    refreshAuditEvents(taskResult.intent.intentId);
+    setPolicyResult({
+      ...policyResult!,
+      decision: 'REJECT',
+      reason: 'User explicitly declined to approve purchase.',
+    });
+  };
+
+  // 4. Payment Success Callback
+  const handlePaymentSuccess = async (payload: {
+    razorpay_order_id: string;
+    razorpay_payment_id: string;
+    razorpay_signature: string;
+    orderId: string;
+  }) => {
+    if (!taskResult?.intent || !contract) return;
+
+    // Verify Signature Server-Side
+    const verRes = await verifyPaymentSignatureAction({
+      ...payload,
+      contractId: contract.contractId,
+    });
+
+    if (verRes.success) {
+      setPaymentCompleted({
+        paymentId: payload.razorpay_payment_id,
+        orderId: payload.orderId,
+      });
+    } else {
+      setErrorMsg(verRes.error || 'Server-side payment verification failed.');
+    }
+
+    await refreshAuditEvents(taskResult.intent.intentId);
+  };
+
+  // 5. Payment Failure Callback
+  const handlePaymentFailed = async (errorReason: string) => {
+    if (!taskResult?.intent) return;
+    setErrorMsg(`Payment Aborted: ${errorReason}`);
+    await refreshAuditEvents(taskResult.intent.intentId);
+  };
+
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-blue-500 selection:text-white">
-      {/* Header Banner */}
-      <header className="border-b border-slate-800 bg-slate-900/50 backdrop-blur-md sticky top-0 z-50">
+    <main className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-blue-500 selection:text-white pb-16">
+      {/* Top Header */}
+      <header className="border-b border-slate-800 bg-slate-900/60 backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center font-bold text-white shadow-lg shadow-blue-500/30 border border-blue-400/40">
@@ -17,14 +212,14 @@ export default function Home() {
             <div>
               <h1 className="font-bold text-base tracking-tight text-white flex items-center gap-2">
                 AgentCommerce Gateway
-                <Badge variant="blue">Razorpay AI Buildathon 2026</Badge>
+                <Badge variant="blue">Razorpay Buildathon 2026</Badge>
               </h1>
               <p className="text-xs text-slate-400">Track 01 — AI Growth & Agentic Commerce</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3 text-xs text-slate-400">
-            <span className="flex items-center gap-1.5 bg-emerald-500/10 text-emerald-400 px-3 py-1 rounded-full border border-emerald-500/20">
+          <div className="flex items-center gap-3">
+            <span className="flex items-center gap-1.5 bg-emerald-500/10 text-emerald-400 text-xs px-3 py-1 rounded-full border border-emerald-500/20">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
               Razorpay Test Mode Active
             </span>
@@ -32,102 +227,118 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="max-w-5xl mx-auto px-6 pt-12 pb-8 text-center">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-medium mb-6">
-          🛡️ Bounded Financial Authority for AI Buyers
-        </div>
-        <h2 className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight leading-tight mb-4">
-          Let AI Agents Buy.{' '}
-          <span className="bg-gradient-to-r from-blue-400 via-indigo-300 to-purple-400 bg-clip-text text-transparent">
-            Keep Humans in Control of Money.
-          </span>
-        </h2>
-        <p className="text-lg text-slate-400 max-w-2xl mx-auto mb-8">
-          A secure authorization & transaction middleware that converts AI intent into locked Transaction Contracts, evaluates deterministic policies, and executes payments via Razorpay.
-        </p>
+      <div className="max-w-6xl mx-auto px-6 pt-8 space-y-6">
+        {/* Policy Configuration Controls */}
+        <PolicyConfigCard policy={policy} onUpdatePolicy={setPolicy} />
 
-        {/* Architecture Thesis Banner */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-3xl mx-auto text-xs font-mono bg-slate-900/90 border border-slate-800 p-3 rounded-xl shadow-xl">
-          <div className="p-2 rounded bg-slate-800/50">
-            <span className="text-blue-400 block font-bold">LLM</span>
-            <span className="text-slate-400">Reasoning</span>
-          </div>
-          <div className="p-2 rounded bg-slate-800/50">
-            <span className="text-amber-400 block font-bold">Policy Engine</span>
-            <span className="text-slate-400">Authority</span>
-          </div>
-          <div className="p-2 rounded bg-slate-800/50">
-            <span className="text-purple-400 block font-bold">Contract Lock</span>
-            <span className="text-slate-400">Safety</span>
-          </div>
-          <div className="p-2 rounded bg-slate-800/50">
-            <span className="text-emerald-400 block font-bold">Razorpay</span>
-            <span className="text-slate-400">Execution</span>
-          </div>
-        </div>
-      </section>
+        {/* AI Assistant Prompt Input */}
+        <AgentChat onRunTask={handleInstructAgent} isLoading={isAgentRunning} />
 
-      {/* Simulated Merchant Ecosystem Catalog Section */}
-      <section className="max-w-7xl mx-auto px-6 py-8">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h3 className="text-xl font-bold text-white">Simulated Merchant Ecosystem</h3>
-            <p className="text-xs text-slate-400">
-              Live products available for AI Agent product discovery and transaction testing
-            </p>
+        {/* Error Notification */}
+        {errorMsg && (
+          <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-sm flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <span className="font-bold">⚠️ Notice:</span> {errorMsg}
+            </span>
+            <button onClick={() => setErrorMsg(null)} className="text-rose-400 hover:text-white text-xs underline">
+              Dismiss
+            </button>
           </div>
-          <div className="flex gap-2">
-            {MERCHANTS_DATA.map((merchant) => (
-              <Badge key={merchant.id} variant="purple">
-                {merchant.name} ({merchant.trustScore}% Trust)
-              </Badge>
-            ))}
-          </div>
-        </div>
+        )}
 
-        {/* Product Catalog Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {PRODUCTS_DATA.slice(0, 6).map((product) => (
-            <Card key={product.id} className="hover:border-slate-700">
-              <CardHeader className="flex items-start justify-between">
-                <div>
-                  <Badge variant="slate" className="mb-2">
-                    {product.merchantName}
+        {/* Task Result & Reasoning */}
+        {taskResult?.intent && (
+          <AgentReasoningCard intent={taskResult.intent} totalProductsFound={taskResult.totalProductsFound} />
+        )}
+
+        {/* Policy Evaluation Result & Approval Action Card */}
+        {policyResult && (
+          <Card
+            className={`mb-6 border-l-4 ${
+              policyResult.decision === 'APPROVE'
+                ? 'border-l-emerald-500 border-slate-800 bg-slate-900/90'
+                : policyResult.decision === 'NEEDS_APPROVAL'
+                ? 'border-l-amber-500 border-amber-500/30 bg-amber-950/20'
+                : 'border-l-rose-500 border-rose-500/30 bg-rose-950/20'
+            }`}
+          >
+            <CardHeader className="flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-sm font-bold text-white">POLICY EVALUATION</span>
+                  <Badge
+                    variant={
+                      policyResult.decision === 'APPROVE'
+                        ? 'emerald'
+                        : policyResult.decision === 'NEEDS_APPROVAL'
+                        ? 'amber'
+                        : 'rose'
+                    }
+                  >
+                    {policyResult.decision}
                   </Badge>
-                  <CardTitle className="text-base line-clamp-1">{product.name}</CardTitle>
                 </div>
-                <Badge variant={product.inStock ? 'emerald' : 'rose'}>
-                  {product.inStock ? 'In Stock' : 'Out of Stock'}
-                </Badge>
-              </CardHeader>
+                <p className="text-xs text-slate-300">{policyResult.reason}</p>
+              </div>
 
-              <CardContent>
-                <p className="text-xs text-slate-400 line-clamp-2 mb-4">{product.description}</p>
-                <div className="flex items-center justify-between pt-2 border-t border-slate-800">
-                  <div>
-                    <span className="text-xs text-slate-500 block">Price</span>
-                    <span className="text-lg font-bold text-white">
-                      ₹{product.price.toLocaleString('en-IN')}
-                    </span>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-xs text-slate-500 block">Shipping</span>
-                    <span className="text-xs font-medium text-slate-300">
-                      {product.shippingDays} days delivery
-                    </span>
-                  </div>
+              {policyResult.decision === 'NEEDS_APPROVAL' && !contract && (
+                <div className="flex items-center gap-2">
+                  <Button variant="primary" size="sm" onClick={handleUserApprovePurchase}>
+                    ✓ Approve Purchase (₹{policyResult.proposedAmount.toLocaleString('en-IN')})
+                  </Button>
+                  <Button variant="danger" size="sm" onClick={handleUserRejectPurchase}>
+                    ✕ Reject
+                  </Button>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </section>
+              )}
+            </CardHeader>
+          </Card>
+        )}
 
-      {/* Footer */}
-      <footer className="border-t border-slate-800 py-8 text-center text-xs text-slate-500">
-        AgentCommerce Gateway • Built for Razorpay AI Buildathon 2026 • Simulated Merchant Sandbox
-      </footer>
+        {/* Transaction Contract Primitive Modal Card */}
+        {contract && <TransactionContractModal contract={contract} />}
+
+        {/* Failure Recovery Demo Simulator Controls */}
+        {contract && !paymentCompleted && (
+          <PriceHikeSimulator
+            contract={contract}
+            isSimulatedPriceHike={simulatedPriceHike}
+            onTogglePriceHike={setSimulatedPriceHike}
+          />
+        )}
+
+        {/* Razorpay Test Checkout Action Button */}
+        {contract && !paymentCompleted && (
+          <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 backdrop-blur-xl">
+            <RazorpayCheckoutButton
+              contract={contract}
+              simulatedPriceOverride={simulatedPriceHike ? Math.round(contract.authorizedAmount * 1.1) : undefined}
+              onPaymentSuccess={handlePaymentSuccess}
+              onPaymentFailed={handlePaymentFailed}
+            />
+          </div>
+        )}
+
+        {/* Payment Success Confirmation Banner */}
+        {paymentCompleted && (
+          <Card className="border-emerald-500/50 bg-emerald-950/20 shadow-emerald-950/30 text-center py-8">
+            <div className="w-14 h-14 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center text-2xl mx-auto mb-4">
+              ✓
+            </div>
+            <h3 className="text-2xl font-extrabold text-white mb-2">Purchase Completed & Verified!</h3>
+            <p className="text-sm text-slate-300 max-w-lg mx-auto mb-4">
+              Merchant order <strong className="text-emerald-400 font-mono">{paymentCompleted.orderId}</strong> has been officially updated to <Badge variant="emerald">PAID</Badge> after server HMAC signature verification.
+            </p>
+            <div className="inline-flex gap-4 text-xs font-mono bg-slate-950/80 px-4 py-2 rounded-xl border border-slate-800 text-slate-400">
+              <span>Razorpay Payment ID: <strong className="text-slate-200">{paymentCompleted.paymentId}</strong></span>
+              <span>Status: <strong className="text-emerald-400">PAID</strong></span>
+            </div>
+          </Card>
+        )}
+
+        {/* Audit Log Timeline */}
+        <AuditTimeline events={auditEvents} />
+      </div>
     </main>
   );
 }
